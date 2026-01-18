@@ -9,8 +9,10 @@ format: html
 ### Exercise 1.1
 ```{r}
 typeof(mtcars)
+# Returns the type of mtcars
 
 class(mtcars)
+# Returns the class of mtcars
 
 nrow(mtcars)
 # Returns the number of rows in the data frame
@@ -36,7 +38,7 @@ colnames(mtcars)
 ```{r}
 T <- 123
 TRUE <- 123
-# This returns an error because 'TRUE' is a vector while T is a value
+# This returns an error because 'TRUE' is a 'reserved keyword'
 ```
 
 ### Exercise 1.3
@@ -63,11 +65,8 @@ str(c(TRUE, 1L))
 
 ### Exercise 1.4
 ```{r}
-as.integer(FALSE)
-# 0
-
-as.integer(TRUE)
-# 1
+as.integer(c(TRUE, FALSE))
+# TRUE gets coerced to 1 and FALSE gets coerced to 0
 ```
 
 ### Exercise 1.5
@@ -81,16 +80,157 @@ str(x)
 mean(x)
 # .44
 
-mean(x) == sum(x) / length 
+mean(x) == sum(x) / length(x)
 # TRUE
+
+mean(mtcars$carb > 3)
+```
+### Sequences
+```{r}
+seq(from = 2, to = 26, by = 2)
+
+1:10
+
+seq(1, 10, by = 1)
 ```
 
 ## Subsetting
+```{r}
+mtcars$mpg
 
-## The most common error you'll see
+x <- list(chr, lgl, letters)
+str(x)
+
+names(x) <- c("chr", "lgl", "alphabet")
+str(x)
+
+x$alphabet
+
+mtcars[[mpg]]
+
+mtcars[["mpg"]]
+```
+
+### Exercise 1.6
+```{r}
+mtcars["mpg"]
+
+mtcars[["mpg"]]
+
+# mtcars["mpg"] selects the mpg column in the data frame, while mtcars[["mpg"]] extracts the numeric values of the mpg column in the data frame. 
+```
+
+### Exercise 1.7
+```{r}
+letters[17]
+
+letters[seq(2, 26, by = 2)]
+
+letters[8:12]
+
+# You cannot use [[ instead of [ for the second and third operators because you cannot extract more than one element in a vector index
+```
+### Subsetting + Assignment
+```{r}
+dbl
+
+dbl[1] <- 10
+dbl
+
+dbl[is.na(dbl)] <- 0
+dbl
+```
+### Exercise 1.8
+```{r}
+letters[18] <- NA
+
+letters
+```
+
+## The most commmon error you'll see
+```{r}
+# Functions are not subsettable
+mean[1:5]
+
+df$col
+```
 
 ## Data Frames
 
+```{r}
+mtcars$wt > 4
+
+mtcars[mtcars$wt > 4, ]
+
+```
+### Exercise 1.9
+```{r}
+mtcars[mtcars$cyl == 4, ]
+
+mtcars[mtcars$mpg > 23, ]
+```
+
+```{r}
+mtcars[mtcars$carb %in% c(3, 6, 8), ]
+
+mtcars[mtcars$carb == 3 | mtcars$carb == 6 | mtcars$carb == 8, ]
+```
+
 # Search
+```{r}
+search()
+
+names(.GlobalEnv)
+
+.secret_var <- 1:10
+.secret_var
+
+asdfasdfasdf
+
+mtcars
+
+find("mtcars")
+
+mtcars <- "this is not the mtcars dataset"
+mtcars
+
+find("mtcars")
+
+str(datasets::mtcars)
+
+dplyr::glimpse(datasets::mtcars)
+```
+## Errors
+### Exercise 1.10
+```{r}
+# library(tidyverse)
+# library(palmerpenguins)
+table(year)
+
+library(tidyverse)
+library(palmerpenguins)
+table(year)
+
+table(penguins$year)
+
+# There are two different errors because in the first instance, R searched for a object called year and could not find anything. In the second instance, R searched for a package called year and found a function.
+```
 
 # dplyr subsetting
+### Exercise 1.11
+```{r}
+penguins |> 
+  slice(seq(2, nrow(penguins), by = 2))
+
+penguins |> 
+  slice(seq(3, nrow(penguins), by = 3))
+```
+
+###Exercise 1.12
+```{r}
+penguins |>
+  filter(species == "Gentoo",
+         island == "Biscoe",
+         body_mass_g >= 5000,
+         body_mass_g <= 5500)
+```
