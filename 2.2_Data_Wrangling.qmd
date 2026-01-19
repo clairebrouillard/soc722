@@ -1,0 +1,123 @@
+---
+title: "2.2 Data Wrangling"
+author: "Claire Brouillard"
+format: html
+---
+```{r}
+# library(nycflights13)
+# library(tidyverse)
+
+```
+
+# 3.2.5 Exercises
+## 1
+```{r}
+flights |>
+  filter(
+    arr_delay > 120,
+    dest == "IAH" | dest == "HOU",
+    carrier == "UA" | carrier == "AA" | carrier == "DL",
+    month == 7 | 8 | 9,
+    sched_dep_time - dep_time <= 0,
+    dep_delay >= 60 & dep_delay - arr_delay > 30
+  )
+```
+
+## 2
+```{r}
+flights |>
+  arrange(desc(dep_delay))
+
+flights|> 
+  arrange(dep_time)
+```
+
+## 3
+```{r}
+flights |>
+  arrange(air_time)
+```
+
+## 4
+```{r}
+flights |>
+  filter(year == 2013) |>
+  distinct(month, day) |>
+  count()
+
+# Yes, there was a flight on every day of 2013. 
+```
+
+## 5
+```{r}
+flights |>
+  arrange(desc(distance))
+# Flights from JFK to HNL travel the farthest distance.
+
+flights |>
+  arrange(distance)
+# There was one flight from EWR to LGA that traveled the shortest distance. 
+```
+
+##6
+Yes, filter() should be used before arrange() to ensure that the results are sorted properly. Filtering out the unwanted cases first allows the arrange() function to sort fewer cases instead of the entire data frame.
+
+#3.3.5 Exercises
+##1
+```{r}
+# I would expect the departure delay to represent the difference in departure time and scheduled departure time. 
+
+flights |>
+  count()
+
+flights |>
+  mutate(chng_dep = dep_time - sched_dep_time) |>
+  select(dep_delay = chng_dep) |>
+  count()
+```
+
+##2
+```{r}
+flights |>
+  select(dep_time, dep_delay, arr_time, arr_delay)
+
+flights |>
+  select(starts_with("dep") | starts_with("arr"))
+
+flights |>
+  select(dep_time:arr_delay & !starts_with("sched"))
+
+flights |>
+  select(!year:day & !carrier:time_hour & !starts_with("sched"))
+```
+
+##3
+```{r}
+flights |>
+  select(dep_time, arr_time, dep_delay, arr_time)
+
+# If you name the same variable twice in the select() call, it only appears once in the tibble.
+```
+
+##4
+
+##5
+
+##6
+
+##7
+
+#4.5.7 Exercises
+
+##1
+
+##2
+
+##3
+
+##4
+
+##5
+
+##6
+
