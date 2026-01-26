@@ -1,0 +1,527 @@
+---
+title: "Chapter 2 homework"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+embed-resources: true
+execute:
+  echo: true
+  message: false
+  warning: false
+---
+
+## Setup
+
+Assume you are working in an RStudio Project. Use `here::here("data", "filename.csv")` to build file paths to datasets in the `data` folder.
+
+```{r}
+library(tidyverse)
+library(here)
+library(psych)   # used for describe()/describeBy() in a few places
+```
+
+```{r}
+heart <- read_csv(here::here("data", "heart.csv"))
+```
+
+::: callout-tip
+If you ever get a “file not found” error, confirm (1) you opened the correct `.Rproj`, and (2) the dataset is inside your project’s data folder (accessed via `here::here("data", ...)`).
+:::
+
+## Tutorial (Chapter 2, plus a bit of 3)
+
+### 1) Estimates of variation around the mean
+
+In class, we talked about quantifying variation. Variance and standard deviation are both based on the **sum of squared error (SSE)** around a model’s predictions.
+
+Start by computing the sample standard deviation and sample variance of height:
+
+```{r}
+df <- heart |>
+  select(Height) |>
+  drop_na() |>
+  haven::zap_labels()
+
+variance_height <- var(df)
+
+variance_height
+
+# Compute sd and variance of height
+```
+
+#### Convert variance to standard deviation
+
+Recall: $\text{SD} = \sqrt{\text{Var}}$.
+
+```{r}
+sd_height <- sqrt(variance_height)
+
+sd_height
+# Convert variance to SD using R as a calculator
+```
+
+#### Compute SSE from the variance and sample size
+
+For the *sample* variance, $$
+s^2 = \frac{\text{SSE}}{n-1}
+\quad\Rightarrow\quad
+\text{SSE} = s^2 (n-1).
+$$
+
+```{r}
+df |>
+  count()
+
+sse_height <- variance_height * 109
+
+
+# Compute n, variance, and then SSE = var * (n - 1)
+```
+
+::: callout-tip
+In R, `var(x)` uses the sample variance with denominator $n-1$. That’s why the formula above uses $n-1$.
+:::
+
+### 2) Estimates of central tendency
+
+Compute mean and median:
+
+```{r}
+df |>
+  summarize(mean_height = mean(Height))
+
+df |>
+  summarize(median_height = median(Height))
+# Mean and median of height
+```
+
+#### Mode (custom helper)
+
+R’s base `mode()` is **not** the statistical mode. Below is a simple helper that returns the most frequent value(s). If the data are multimodal, it returns the average of the modes.
+
+```{r}
+mymode <- function(x) {
+  x2 <- na.omit(x)
+  ux <- unique(x2)
+  tab <- tabulate(match(x2, ux))
+  mean(ux[tab == max(tab)])
+}
+```
+
+```{r}
+df |>
+  summarize(mode_height = mymode(Height))
+# Use mymode() to compute the mode of height
+```
+
+### 3) Group and summarize a dataset
+
+Compute mean and SD of height by gender using tidyverse verbs:
+
+```{r}
+df_gender <- heart |>
+  select(Height, Gender) |>
+  drop_na() |>
+  haven::zap_labels()
+
+df_gender |>
+  group_by(Gender) |>
+  summarize(n = n(),
+            mean_height = mean(Height),
+            sd_height = sqrt(var(Height)))
+# Summarize Height by Gender:
+# - n
+# - mean height
+# - sd height
+```
+
+If you want a richer descriptive table, `psych::describeBy()` can do that:
+
+```{r}
+describeBy(heart$Height, heart$Gender, mat = TRUE)
+```
+
+::: callout-tip
+Even when you use a helper like `describeBy()`, prefer doing **wrangling** (filtering, selecting, mutating, grouping) with tidyverse verbs first, then pass the result to the summary function.
+:::
+
+### 4) Estimates of variation revisited: SSE from the data
+
+One way to compute SSE around the **mean model** (predict $\bar{Y}$ for everyone):
+
+```{r}
+df <- df |>
+  mutate(mean_pred = mean(Height),
+         mean_pred_error = Height - mean_pred)
+
+sse_mean <- sum(df$mean_pred_error^2)
+
+sse_mean
+# Compute SSE around the mean
+```
+
+Now modify that idea to compute SSE around the **median model** (predict $\tilde{Y}$ for everyone).
+
+```{r}
+df <- df |>
+  mutate(med_pred = median(Height),
+         med_pred_error = Height - med_pred)
+
+sse_med <- sum(df$med_pred_error^2)
+
+sse_med
+
+# Compute SSE around the median
+```
+
+Answer in words: is SSE around the median larger or smaller than SSE around the mean for these data?
+
+For these data, the SSE around the mean is smaller than the SSE around the median.
+
+### 5) Missing data
+
+Many functions accept `na.rm = TRUE` to ignore missing values.
+
+```{r}
+heart |>
+  summarize(mean_height = mean(Height, na.rm = TRUE))
+# Example: mean height ignoring missing values
+```
+
+You can also drop missing values explicitly:
+
+```{r}
+heart |> 
+  drop_na(Height) |> 
+  summarize(mean_height = mean(Height))
+```
+
+## HW 02 Questions
+
+### 1) Central tendency and variability (USNEWS)
+
+The dataset `USNEWS.csv` contains data used by *U.S. News and World Report* to make its college rankings. Two variables of interest are:
+
+-   `gradRate`: graduation rate (percent from 0 to 100)
+-   `accptRate`: acceptance rate (proportion from 0 to 1)
+
+For each variable, obtain estimates of central tendency (mean, median, mode) and variability (variance and standard deviation). Write a few sentences describing what you found.
+
+```{r}
+usnews <- read_csv(here::here("data", "usnews.csv"))
+```
+
+```{r}
+d <- usnews |>
+  select(gradRate, accptRate) |>
+  drop_na() |>
+  haven::zap_labels() 
+
+d <- d |>
+  mutate(grad = as.numeric(gradRate),
+         accept = as.numeric(accptRate))
+
+grad_sum <- d |>
+  drop_na() |>
+  summarize(mean_gr = mean(grad),
+            median_gr = median(grad),
+            mode_gr = mymode(grad),
+            variance_gr = var(grad),
+            sd_gr = sqrt(variance_gr),
+            n = n())
+
+accept_sum <- d |>
+  drop_na() |>
+  summarize(mean_ac = mean(accept),
+            median_ac = median(accept),
+            mode_ac = mymode(accept),
+            variance_ac = var(accept),
+            sd_ac = sqrt(variance_ac),
+            n = n())
+
+# Create a compact summary table for gradRate and accptRate:
+# mean, median, mode, variance, sd, and n (non-missing)
+```
+
+For these data, the mean graduation rate for the 1197 colleges is 60.536, the median is 60, and the mode is 57. The variance is 355.254 and the standard deviation is 18.848. The mean acceptance rate is .751, or 75.1%, while the median is 0.78 (or 78%) and the mode is 1. The variance is .026 and the standard deviation is .161.
+
+### 2) Conditional vs unconditional predictions (USNEWS)
+
+Another interesting variable is `Type` (public vs private).
+
+1.  Write **Model C** that makes a constant prediction for every school.
+2.  Write **Model A** that makes predictions of `gradRate` conditional on `Type`.
+3.  As a first look at whether Model A might be useful, compute the mean `gradRate` for private and public schools.
+4.  Write a sentence or two describing these results and whether it *appears* useful to move from Model C to Model A.
+
+Use both a verbal description and a model statement in LaTeX.
+
+#### Model statements (fill in)
+
+-   Model C (compact): $$
+    Y_i = 60.41 + \varepsilon_i
+    $$
+-   Model A (augmented; conditional means by type): $$
+    Y_i = 50.2 + 16 (Private_i) + \varepsilon_i
+    $$ where $X_i$ is an indicator you define (e.g., $X_i = 1$ if Private, $0$ if Public).
+
+```{r}
+gradtype <- usnews |>
+  select(gradRate, Type) |>
+  mutate(grad = as.numeric(gradRate))
+
+gradtype <- gradtype |>
+  drop_na()
+
+gradtype_sum <- gradtype |>
+  select(grad, Type) |>
+  group_by(Type) |>
+  summarize(grad_mean = mean(grad, na.rm = TRUE),
+            n = n())
+ 
+gradtype_sum
+
+grad_models <- gradtype |>
+  mutate(mod_c_pred = 60,
+         mod_c_error = grad - mod_c_pred)
+
+sse_c <- sum(grad_models$mod_c_error^2)
+
+sse_c
+
+grad_models <- grad_models |>
+  mutate(private = if_else(Type == "Private", 1, 0),
+         mod_a_pred = if_else(private == 1, 66.2, 50.2),
+         mod_a_error = grad - mod_a_pred) 
+
+sse_a <- sum(grad_models$mod_a_error^2)
+
+pre_gradtype <- (sse_c - sse_a) / sse_c
+
+pre_gradtype
+
+# Compute mean gradRate by Type (and include n)
+```
+
+It appears to be useful to move from model C to model A because the proportional reduction in error between the two models is about 16.5%.
+
+### 3) Coupon campaign and store sales (stores)
+
+At 10 grocery stores, a market researcher records the number of cases of a product sold both before and after coupons were mailed to households in the area. The data below are the **changes** in the number of cases sold (positive = more after coupons, negative = fewer, zero = no change).
+
+| Store | Change |
+|------:|-------:|
+|     A |      5 |
+|     B |      4 |
+|     C |     -2 |
+|     D |      6 |
+|     E |      1 |
+|     F |      0 |
+|     G |     -4 |
+|     H |      3 |
+|     I |      2 |
+|     J |      7 |
+
+#### 3a) By hand
+
+Calculate the **mean** and **standard deviation** for the change scores by hand (or in Excel).
+
+Mean = 2.2
+
+SD = 3.34
+
+(Optional check in R after you finish your by-hand work:)
+
+```{r}
+change_a <- c(5, 4, -2, 6, 1) 
+change_b <- c(-4, 3, 2, 7)
+change <- c(change_a, 0, change_b)
+
+change
+
+mean(change)
+sd(change) * (sqrt(9/10))
+# Create a vector of the change scores and compute mean/sd as a check
+```
+
+#### 3b) Model C (no change)
+
+Specify a Model C that predicts **no change** for every store.
+
+Write it in the same form as class:
+
+$$
+Y_i = \text{0} + \varepsilon_i
+$$
+
+```{r}
+letters <- LETTERS[1:10]
+
+stores_df <- data.frame(letters, change)
+
+stores_df <- stores_df |>
+  mutate(mod_c_pred = 0,
+         mod_c_error = change - mod_c_pred)
+
+sse_c <- sum(stores_df$mod_c_error^2) 
+
+# SSE for model C
+sse_c
+# Write Model C in words (in the text), then compute SSE(C) in R later
+```
+
+#### 3c) Model A (best constant prediction from the data)
+
+Specify a Model A with one parameter that makes the best possible constant prediction of `Change` based on the data.
+
+$$
+Y_i = 2.2 + \varepsilon_i
+$$
+
+```{r}
+stores_df <- stores_df |>
+  mutate(mod_a_pred = 2.2,
+         mod_a_error = change - mod_a_pred)
+
+sse_a <- sum(stores_df$mod_a_error^2) 
+
+sse_a
+
+# Write Model A in words (in the text), then compute SSE(A) in R later
+```
+
+#### 3d) Null hypothesis and interpretation
+
+State the null hypothesis tested by comparing Model C and Model A, and give a non-technical interpretation of what the comparison asks.
+
+#### 3e) Compute error for both models (SSE)
+
+Using SSE as your aggregate measure of error, compute:
+
+-   $\text{SSE}(C)$ for the compact model
+-   $\text{SSE}(A)$ for the augmented model
+
+```{r}
+sse_c <- sum(stores_df$mod_c_error^2) 
+sse_c
+
+sse_a <- sum(stores_df$mod_a_error^2) 
+sse_a
+# Compute SSE(C) and SSE(A)
+```
+
+#### 3f) Proportional reduction in error (PRE)
+
+Compute: $$
+\text{PRE} = \frac{\text{SSE}(C) - \text{SSE}(A)}{\text{SSE}(C)}.
+$$
+
+Based on this PRE, do you think Model C should be rejected in favor of Model A? (No formal test yet—explain your reasoning.)
+
+```{r}
+pre_stores <- (sse_c - sse_a) / sse_c
+
+pre_stores
+# Compute PRE from SSE(C) and SSE(A)
+```
+
+#### 3g) Do it again using `stores.csv`
+
+These data are also available in `stores.csv`. Read in the data and use R to obtain all the numbers you calculated above (including PRE if you can).
+
+```{r}
+stores <- read_csv(here::here("data", "stores.csv"))
+```
+
+```{r}
+stores |>
+  summarize(mean_change = mean(change))
+
+sd_change <- sqrt(var(change))
+sd_change
+
+stores <- stores |>
+  mutate(mod_c_pred = 0,
+         mod_c_error = change - mod_c_pred)
+
+sse_c_stores <- sum(stores$mod_c_error^2) 
+
+sse_c_stores
+
+stores <- stores |>
+  mutate(mod_a_pred = 2.2,
+         mod_a_error = change - mod_a_pred)
+
+sse_a_stores <- sum(stores$mod_a_error^2) 
+
+sse_a_stores
+
+
+pre_stores2 <- (sse_c_stores - sse_a_stores) / sse_c_stores
+
+pre_stores2
+# Use the stores data to compute:
+# - mean and sd of Change
+# - SSE(C) where prediction is 0
+# - SSE(A) where prediction is mean(Change)
+# - PRE
+```
+
+::: callout-tip
+A convenient SSE pattern is:
+
+-   If predictions are stored in `y_hat`, then `sum((y - y_hat)^2)`.
+-   For Model C here, `y_hat` is a constant 0.
+-   For Model A here, `y_hat` is a constant equal to `mean(y)`.
+:::
+
+### 4) Concept questions
+
+In your own words (**not** using the example from class):
+
+1.  Why is $\text{ERROR}(\text{Model A}) \le \text{ERROR}(\text{Model C})$?
+
+$\text{ERROR}(\text{Model A}) \le \text{ERROR}(\text{Model C})$ because adding more predictors makes the model's predictions more accurate, reducing the amount of error.
+
+2.  What is a **degree of freedom**?
+
+A degree of freedom is a value that can vary when fitting a model.
+
+### 5) Sampling distributions and small samples
+
+Visit the app:
+
+-   https://correll.shinyapps.io/centralTendency/
+
+5a) Generate four or five iterations using a normally distributed population and samples of $n = 5$.
+
+-   Where do the sampling distributions of the mean peak?
+
+The sampling distributions of the mean peak around 15 observations at about the mean (10).
+
+-   How much do the means and medians vary? What minimum and maximum values do you see for each?
+
+The means and medians do not vary much, with the maximum mean being 10.03 and the minimum being 10 while the median remains at 10.
+
+5b) Answer the same questions for the mean using $n = 500$. (Rescale the histograms so you can see variability.)
+
+When $n = 500$, the sampling distributions of the mean peak around 8 observations at about the mean (10). The means range from 10.01 to 10.07 and the medians range from 10 to 10.1.
+
+### 6) Central Limit Theorem intuition
+
+Visit the app:
+
+-   https://correll.shinyapps.io/centralLimit/
+
+6a) Set a **skewed** population and draw samples of different sizes. What is the shape of the sampling distribution of the mean for samples of $n = 2$?
+
+The mean for samples of $n = 2$ is skewed to the left, with the peak around 3 on a 10-point scale.
+
+6b) What is the shape for $n = 10$?
+
+For $n = 10$, the shape is the same except the scores make up a smaller range, about 3 to 6.
+
+6c) What is the shape for $n = 100$?
+
+For $n = 100$, the shape remains the same with more variation in bin height, but the majority of scores are between 3.8 and 4.2.
