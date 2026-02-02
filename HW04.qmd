@@ -1,7 +1,17 @@
 ---
 title: "Chapter 4 homework"
-format: html
-embed-resources: true
+format:
+  html:
+    embed-resources: true
+  pdf:
+    pdf-engine: xelatex
+execute:
+  echo: true
+  message: false
+  warning: false
+editor: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r}
@@ -23,7 +33,10 @@ fitness <- read_csv(here("data", "fitness.csv"))
 Write brief answers.
 
 - What is a sampling distribution of a statistic (like a mean), and what is it useful for?
+The sampling distribution of a statistic is a theoretical quantity that represents what would happen if you took a samples from a population with a set size, mean, and standard deviation. It is useful for testing the null hypothesis. 
+
 - How can a sampling distribution be used to evaluate whether an observed value is “surprising” under a null hypothesis?
+A sampling distribution can be used to evaluate whether an observed value is "surprising" under a null hypothesis by creating a null distribution, which can be used to find critical PRE values to compare to the observed PRE value. If the observed PRE value is vastly different from the null PRE distribution, then the observed value would be considered "surprising."
 
 ## 2. Model comparison test: is the mean resting pulse 72?
 
@@ -48,12 +61,6 @@ model_a <- lm(rstpulse_dev ~ 1, data = fitness)
 
 summary(model_c)
 summary(model_a)
-# Model C: fixed mean at 72 (no parameters)
-# Hint: use lm(... ~ 0) with the outcome shifted by 72
-# model_c <- ...
-
-# Model A: estimate the mean (intercept-only model)
-# model_a <- ...
 ```
 
 ### 2b. Compute PRE and F
@@ -71,15 +78,15 @@ sse_c <- deviance(model_c)
 sse_a <- deviance (model_a)
 
 pre <- (sse_c - sse_a) / sse_c
-
 pre
+
 n <- fitness |>
   nrow()
 
 pc <- 0
 pa <- 1
 
-fstat <- (pre / (pc - pa)) / ((1 - pre) / ( n - 1))
+fstat <- (pre / (pa - pc)) / ((1 - pre) / ( n - 1))
 ```
 
 ### 2c. Identify “surprising” values from the book tables and/or by using `qf()`.
@@ -94,7 +101,7 @@ Fill in the quantities the tables depend on:
 
 Then, using the book tables and/or `qf()`:
 
-- critical PRE at $\alpha = .05$:  PREcrit = 0.138
+- critical PRE at $\alpha = .05$:  PREcrit = 0.122
 - critical F at $\alpha = .05$:  Fcrit = 4.171
 
 ```{r}
@@ -122,14 +129,18 @@ null_sims <- tibble(sim_number = 1:1000) |>
 quantile(null_sims$pre, c(.95, .99, 1))
 
 # F
-f_obs <- fstat
 f_crit <- qf(1 - alpha, df1, df2)
+f_crit
 ```
 
 ### 2d. Conclusions
 
 - Statistical conclusion: Do you reject or retain the null hypothesis at $\alpha = .05$? Explain using the logic of “surprising under the null.”
+You reject the null hypothesis at $\alpha = .05$ because the observed F statistic of 150.209 is vastly different than the F* of 4.17, meaning that the observed F statistic is surprising under the null distribution. 
+
 - Substantive conclusion: Give a one-sentence interpretation in plain language.
+The mean resting pulse of the sample is not 72. 
+
 
 ## 3. Alternative F formula using SSR and SSE(A)
 
@@ -142,8 +153,8 @@ $$F^* = \frac{\text{SSR}/(P_A - P_C)}{\text{SSE}(A)/(n - P_A)}$$
 ### 3a. Compute F using SSR and SSE(A)
 
 ```{r}
-# ssr <- ...
-# f_star_ssr <- ...
+ssr <- sse_c - sse_a
+f_stat_ssr <- (ssr/ (pa - pc)) / (sse_a / (n - pa))
 ```
 
 ### 3b–3e. Interpretation
@@ -151,12 +162,15 @@ $$F^* = \frac{\text{SSR}/(P_A - P_C)}{\text{SSE}(A)/(n - P_A)}$$
 Write brief answers.
 
 - What does the numerator $\text{SSR}/(P_A - P_C)$ represent?
+The numerator represents mean squares reduced.
 - What does the denominator $\text{SSE}(A)/(n - P_A)$ represent?
+The denominator represents the mean square error. 
 - What does $F^*$ represent conceptually?
+F represents the proportional reduction in error per added parameter compared to the proportion of error that remains. 
 - Compute $t$ for this $F^*$ (use the relationship between $t$ and $F$ when the numerator df is 1).
 
 ```{r}
-# t_star <- ...
+t_stat <- sqrt(f_stat_ssr)
 ```
 
 ## 4. Does running increase pulse rate?
@@ -177,31 +191,38 @@ One convenient approach:
      $$D_i = b_0 + \varepsilon_i.$$
 
 ```{r}
-# fitness <- fitness |>
-#   mutate(d = RUNPULSE - RSTPULSE)
+fitness <- fitness |>
+  mutate(d = RUNPULSE - RSTPULSE)
 
-# model_c <- ...
-# model_a <- ...
+modelc <- lm(d ~ 0, data = fitness)
+modela <- lm(d ~ 1, data = fitness)
+
+summary(modelc)
+summary(modela)
 ```
 
 ### 4b. Compute PRE and F, then compare to critical values
 
 ```{r}
-# sse_c <- ...
-# sse_a <- ...
-# pre <- ...
-# f_star <- ...
+ssec <- deviance(modelc)
+ssea <- deviance(modela)
+pre_4 <- (ssec - ssea) / ssec
+f_4 <- (pre_4 / (pa - pc)) / ((1 - pre_4) / ( n - 1))
+f_4
 ```
 
 From the book tables at $\alpha=.05$:
 
-- PREcrit =
-- Fcrit =
+- PREcrit = .122
+- Fcrit = 4.17
 
 ### 4c. Conclusions
 
 - Statistical conclusion (reject/retain the null).
+I reject the null hypothesis because the observed F statistic of 3475.443 exceeds the F* of 4.17. 
+
 - Substantive conclusion (plain-language interpretation).
+There is some mean change between resting and running pulse. 
 
 ## 5. With your own data
 
@@ -210,17 +231,81 @@ Return to your own dataset and the model comparison you set up previously. In th
 ### 5a. Fit your models
 
 ```{r}
+gss2024 <- readRDS(file = here::here("data", "gss2024.rds"))
 
+gss <- gss2024 |>
+  select(courtsnv) |>
+  drop_na() |>
+  haven::zap_labels()
+
+gss_recoded <- gss |>
+  mutate(
+    courtsdv = recode(courtsnv,
+                        `1` = -1,
+                        `2` = 1,
+                        `3` = 0)
+    )
+
+gss_recoded <- gss_recoded |>
+  mutate(dev = courtsdv - 0)
+
+mod_c <- lm(dev ~ 0, 
+            data = gss_recoded)
+
+mod_a <- lm(dev ~ 1, 
+            data = gss_recoded)
+df_1 <- 1
+df_2 <- 615
 ```
 
 ### 5b. Report PRE, F\*, and t\*
 
 ```{r}
+sse_mod_c <- deviance(mod_c)
+sse_mod_a <- deviance(mod_a)
 
+pre_5 <- (sse_mod_c - sse_mod_a) / sse_mod_c
+pre_5
+
+n_5 <- gss_recoded |>
+  nrow()
+
+f_star <- (pre_5 / (pa - pc)) / ((1 - pre_5) / ( n_5 - 1))
+f_star
+
+t_star <-sqrt(f_star)
 ```
 
 ### 5c. Use tables or functions to identify critical values and write conclusions
 
 ```{r}
+# PRE
+calc_null_pre_5 <- function() {
+  
+  null_data_5 <- tibble(dev = rnorm(615, 0, 0))
+  
+  m_0 <- lm(dev ~ 0, data = gss_recoded)
+  m_1 <- lm(dev ~ 1, data = gss_recoded)
 
+  
+  null_pre <- (deviance(m_0) - deviance(m_1)) / deviance(m_0)
+  
+  return(null_pre)
+}
+
+null_sims_5 <- tibble(sim_number = 1:1000) |>
+  rowwise() |>
+  mutate(pre = calc_null_pre_5())
+
+quantile(null_sims$pre, c(.95, .99, 1))
+
+# F
+f_c <- qf(1 - alpha, df_1, df_2)
+f_c
+
+# t
+f_t <- qt(1 - alpha, df_2, lower.tail = TRUE)
+f_t
 ```
+
+I reject the null hypothesis because the observed F statistic of 256.092 exceeds the F* of 3.857. This means that respondents' answers are not evenly distributed between "too harshly" and "not harshly enough"; the mean is not 0. 
