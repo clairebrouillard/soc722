@@ -9,6 +9,12 @@ format:
 
 ```{r}
 library(tidyverse)
+library(tinyplot)
+
+tinytheme("ipsum",
+         family = "Avenir Next Condensed",
+         palette.qualitative = "Tableau 10",
+         palette.sequential = "agSunset")
 ```
 
 ## Data
@@ -39,10 +45,24 @@ Throughout, use:
 ## 1a. Descriptive statistics (psych)
 
 Use `psych::describe()` (or something else if you want) to get descriptive statistics for `life_exp` and `murder`.
+```{r}
+pysch_states <- states |>
+  select(life_exp, murder) |>
+  psych::describe()
+
+pysch_states
+```
 
 ## 1b. Descriptive statistics (tidyverse)
 
 Compute (at minimum) the mean and standard deviation of `life_exp` and `murder` using `summarize()`.
+```{r}
+states |>
+  summarize(mean_life_exp = mean(life_exp),
+            sd_life_exp = sd(life_exp),
+            mean_murder = mean(murder),
+            sd_murder = sd(murder))
+```
 
 # Question 2a: Regression and model comparison
 
@@ -61,20 +81,28 @@ Use the notation below (fill in the missing pieces in your write-up):
 
 Model C:
 $$
-Y_i = \;\;\;\;\;\;\;\; + \varepsilon_i
+Y_i = 0 + \varepsilon_i
 $$
 
 Model A:
 $$
-Y_i = \;\;\;\;\;\;\;\; + \;\;\;\;\;\;\;\; X_i + \varepsilon_i
+Y_i = X_i+ \varepsilon_i
 $$
 
 Null hypothesis (in symbols and words):
 $$
-H_0: \;\;\;\;\;\;\;\;
+H_0: b_0 = 0
 $$
 
 ## 2a(ii). Fit both models
+
+```{r}
+model_c <- lm(life_exp ~ 1, data = states)
+summary(model_c)
+
+model_a <- lm(life_exp ~ 1 + murder, data = states)
+summary(model_a)
+```
 
 ## 2a(iii). Compute SSE(C), SSE(A), PRE, and F
 
@@ -90,12 +118,26 @@ $$
 F = \frac{(\mathrm{SSE}_C - \mathrm{SSE}_A)/(P_A - P_C)}{\mathrm{SSE}_A/(n - P_A)}.
 $$
 
+```{r}
+sse_c <- deviance(model_c)
+sse_a <- deviance(model_a)
+
+pre <- (sse_c - sse_a) / sse_c
+pre
+
+pa <- 1
+pc <- 49
+n <- 50
+
+f <- ((sse_c - sse_a)/(pa - pc)) / (sse_a/(n - pa))
+f
+```
 ## 2a(iv). Write the prediction equation and interpret coefficients
 
 Write the prediction equation implied by Model A:
 
 $$
-\widehat{\text{life_exp}} = \;\;\;\;\;\;\;\; + \;\;\;\;\;\;\;\; (\text{murder})
+\widehat{\text{life_exp}} = 72.97 - 0.28 (\text{murder})
 $$
 
 Interpret:
@@ -116,17 +158,37 @@ Create a centered version of murder:
 
 ## 2b(i). Create `murder_c` and refit the model
 
+```{r}
+states <- states |>
+  mutate(murder_c = murder - mean(murder))
+
+fit_cent <- lm(life_exp ~ murder_c, data = states)
+summary(fit_cent)
+```
+
 ## 2b(ii). Report SSE(A), SSE(C), PRE, and F again
 
 Compute the same fit statistics (SSE, PRE, F). Compare them to the results from Question 2a.
+```{r}
+c_sse_a <- deviance(fit_cent)
 
+pre_cent <- (sse_c - c_sse_a) / sse_c
+pre_cent
+
+pa <- 1
+pc <- 49
+n <- 50
+
+f_cent <- ((sse_c - c_sse_a)/(pa - pc)) / (c_sse_a/(n - pa))
+f_cent
+```
 
 ## 2b(iii). Interpret coefficients after centering
 
 Write the prediction equation for the centered model and interpret the intercept and slope.
 
 In particular: what does the intercept represent *now*?
-
+$$\widehat{\text{life_exp}} = 70.87 - 0.28 (\text{murder})$$
 
 ## 2b(iv). Plot and compare
 
@@ -136,6 +198,23 @@ Make two scatterplots with regression lines:
 2. `life_exp` vs. `murder_c`
 
 How are these plots different?
+```{r}
+plt(life_exp ~ murder,
+    data = states,
+    ylim = c(67, 74),
+    main = "Life expectancy and murder rate",
+    sub = "US states, 1977",
+    xlab = "Murder rate per 100,000",
+    ylab = "Life exepectancy at birth")
+
+plt(life_exp ~ murder_c,
+    data = states,
+    ylim = c(67, 74),
+    main = "Life expectancy and murder rate",
+    sub = "US states, 1977",
+    xlab = "Murder rate per 100,000 centered around the mean",
+    ylab = "Life exepectancy at birth")
+```
 
 # Question 2c: Change the units of the predictor
 
