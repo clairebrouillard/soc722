@@ -1,0 +1,184 @@
+---
+title: "Chapter 6 homework"
+format:
+  html:
+    embed-resources: true
+---
+
+## Setup
+
+```{r}
+library(tidyverse)
+```
+
+## Data
+
+This homework uses a built-in dataset from base R (`state.x77`). Run the code below to create the working tibble `states`.
+
+```{r}
+state.x77_with_names <- as_tibble(state.x77,
+                                  rownames = "state")
+
+states <- bind_cols(state.x77_with_names,
+                    region = state.division) |>
+  janitor::clean_names() |>
+  mutate(
+    south = as.integer(
+      str_detect(as.character(region), "South")
+    )
+  )
+```
+
+Throughout, use:
+
+- outcome: `life_exp`
+- predictor: `murder`
+
+# Question 1: Descriptive statistics
+
+## 1a. Descriptive statistics (psych)
+
+Use `psych::describe()` (or something else if you want) to get descriptive statistics for `life_exp` and `murder`.
+
+## 1b. Descriptive statistics (tidyverse)
+
+Compute (at minimum) the mean and standard deviation of `life_exp` and `murder` using `summarize()`.
+
+# Question 2a: Regression and model comparison
+
+You will evaluate whether `murder` predicts `life_exp`.
+
+## 2a(i). Write the model comparison and null hypothesis
+
+Write Model C and Model A in words and equations, and state the null hypothesis.
+
+A typical setup for testing whether a slope is needed is:
+
+- Model C (constrained): slope fixed at 0
+- Model A (augmented): slope estimated from the data
+
+Use the notation below (fill in the missing pieces in your write-up):
+
+Model C:
+$$
+Y_i = \;\;\;\;\;\;\;\; + \varepsilon_i
+$$
+
+Model A:
+$$
+Y_i = \;\;\;\;\;\;\;\; + \;\;\;\;\;\;\;\; X_i + \varepsilon_i
+$$
+
+Null hypothesis (in symbols and words):
+$$
+H_0: \;\;\;\;\;\;\;\;
+$$
+
+## 2a(ii). Fit both models
+
+## 2a(iii). Compute SSE(C), SSE(A), PRE, and F
+
+Compute:
+
+- $\mathrm{SSE}_C$ and $\mathrm{SSE}_A$ from the fitted models
+- $\mathrm{PRE} = (\mathrm{SSE}_C - \mathrm{SSE}_A)/\mathrm{SSE}_C$
+- the model-comparison $F$ statistic
+
+Use `deviance()` for SSE (RSS) and `df.residual()` as needed.
+
+$$
+F = \frac{(\mathrm{SSE}_C - \mathrm{SSE}_A)/(P_A - P_C)}{\mathrm{SSE}_A/(n - P_A)}.
+$$
+
+## 2a(iv). Write the prediction equation and interpret coefficients
+
+Write the prediction equation implied by Model A:
+
+$$
+\widehat{\text{life_exp}} = \;\;\;\;\;\;\;\; + \;\;\;\;\;\;\;\; (\text{murder})
+$$
+
+Interpret:
+
+- the intercept
+- the slope
+
+## 2a(v). Conclusion
+
+State:
+
+- statistical conclusion (report $F$ or $t$, PRE, and $p$)
+- substantive conclusion (in plain language)
+
+# Question 2b: Center the predictor
+
+Create a centered version of murder:
+
+## 2b(i). Create `murder_c` and refit the model
+
+## 2b(ii). Report SSE(A), SSE(C), PRE, and F again
+
+Compute the same fit statistics (SSE, PRE, F). Compare them to the results from Question 2a.
+
+
+## 2b(iii). Interpret coefficients after centering
+
+Write the prediction equation for the centered model and interpret the intercept and slope.
+
+In particular: what does the intercept represent *now*?
+
+
+## 2b(iv). Plot and compare
+
+Make two scatterplots with regression lines:
+
+1. `life_exp` vs. `murder`
+2. `life_exp` vs. `murder_c`
+
+How are these plots different?
+
+# Question 2c: Change the units of the predictor
+
+Create a transformed predictor by standardizing `murder`.
+
+## 2c(i). Create `murder_std` and refit the model
+
+## 2c(ii). Report SSE(A), SSE(C), PRE, and F again
+
+Compute SSE, PRE, and F again and compare them to 2a and 2b.
+
+## 2c(iii). Interpret coefficients after rescaling
+
+Write the prediction equation and interpret the slope carefully in the new units.
+
+# Question 3: Predicted values and what transformations do (and do not) change
+
+You now have three versions of the same basic relationship:
+
+1. using `murder`
+2. using `murder_c`
+3. using `murder_std`
+
+## 3a. Predicted life expectancy at a specific murder rate
+
+Using each of your three fitted Model A versions, compute the predicted life expectancy for a state with `murder` = 8.
+
+Show your work. (Be explicit about how you convert 8 into the appropriate value for `murder_c` and `murder_std`.)
+
+## 3b. Summary paragraph
+
+Write a brief summary explaining what you learned about transforming a predictor:
+
+- How do these transformations affect the estimated intercept and slope?
+- Do they change predicted values (when transformed consistently)?
+- Do they change overall goodness of fit (SSE, PRE, $F$)?
+
+# Project application
+
+Do the same thing with an outcome and predictor of your choice from your own dataset. Use three transformations:
+
+- original
+- normalized X
+- fully standardized
+
+Interpret the intercepts and slopes for each of the three models. Compare the fit statistics for each of the three models.
