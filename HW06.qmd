@@ -9,6 +9,8 @@ format:
 
 ```{r}
 library(tidyverse)
+library(broom)
+library(modelsummary)
 library(tinyplot)
 
 tinytheme("ipsum",
@@ -102,6 +104,15 @@ summary(model_c)
 
 model_a <- lm(life_exp ~ 1 + murder, data = states)
 summary(model_a)
+
+options(modelsummary_get = "broom")
+
+msummary(list("MC" = model_c, 
+              "MA" = model_a),
+         fmt = 3,
+         estimate = "{estimate} ({std.error})",
+         statistic = NULL,
+         gof_map = c("nobs", "F", "r.squared"))
 ```
 
 ## 2a(iii). Compute SSE(C), SSE(A), PRE, and F
@@ -163,7 +174,12 @@ states <- states |>
   mutate(murder_c = murder - mean(murder))
 
 fit_cent <- lm(life_exp ~ murder_c, data = states)
-summary(fit_cent)
+
+msummary(list("Centered" = fit_cent),
+         fmt = 3,
+         estimate = "{estimate} ({std.error})",
+         statistic = NULL,
+         gof_map = c("nobs", "F", "r.squared"))
 ```
 
 ## 2b(ii). Report SSE(A), SSE(C), PRE, and F again
@@ -222,9 +238,33 @@ Create a transformed predictor by standardizing `murder`.
 
 ## 2c(i). Create `murder_std` and refit the model
 
+```{r}
+states <- states |>
+  mutate(murder_std = (murder - mean(murder)) / sd(murder))
+
+fit_stdx <- lm(life_exp ~ murder_std, data = states)
+
+msummary(list("X std." = fit_stdx),
+         fmt = 3,
+         estimate = "{estimate} ({std.error})",
+         statistic = NULL,
+         gof_map = c("nobs", "F", "r.squared"))
+```
+
 ## 2c(ii). Report SSE(A), SSE(C), PRE, and F again
 
 Compute SSE, PRE, and F again and compare them to 2a and 2b.
+
+```{r}
+sse_std <- deviance(fit_stdx)
+sse_std
+
+pre_std <- (sse_c - sse_std) / sse_c
+pre_std
+
+f_std <- ((sse_c - sse_std)/(pa - pc)) / (sse_std/(n - pa))
+f_std
+```
 
 ## 2c(iii). Interpret coefficients after rescaling
 
@@ -237,6 +277,16 @@ You now have three versions of the same basic relationship:
 1. using `murder`
 2. using `murder_c`
 3. using `murder_std`
+
+```{r}
+msummary(list("Original" = model_a,
+              "Centered" = fit_cent,
+              "X-std." = fit_stdx),
+         fmt = 3,
+         estimate = "{estimate}",
+         statistic = NULL,
+         gof_map = c("nobs", "F", "r.squared")) 
+```
 
 ## 3a. Predicted life expectancy at a specific murder rate
 
