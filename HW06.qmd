@@ -3,6 +3,14 @@ title: "Chapter 6 homework"
 format:
   html:
     embed-resources: true
+    mathjax: default
+execute:
+  echo: true
+  message: false
+  warning: false
+editor: 
+  markdown: 
+    wrap: 72
 ---
 
 ## Setup
@@ -21,7 +29,8 @@ tinytheme("ipsum",
 
 ## Data
 
-This homework uses a built-in dataset from base R (`state.x77`). Run the code below to create the working tibble `states`.
+This homework uses a built-in dataset from base R (`state.x77`). Run the
+code below to create the working tibble `states`.
 
 ```{r}
 state.x77_with_names <- as_tibble(state.x77,
@@ -39,14 +48,16 @@ states <- bind_cols(state.x77_with_names,
 
 Throughout, use:
 
-- outcome: `life_exp`
-- predictor: `murder`
+-   outcome: `life_exp`
+-   predictor: `murder`
 
 # Question 1: Descriptive statistics
 
 ## 1a. Descriptive statistics (psych)
 
-Use `psych::describe()` (or something else if you want) to get descriptive statistics for `life_exp` and `murder`.
+Use `psych::describe()` (or something else if you want) to get
+descriptive statistics for `life_exp` and `murder`.
+
 ```{r}
 pysch_states <- states |>
   select(life_exp, murder) |>
@@ -57,7 +68,9 @@ pysch_states
 
 ## 1b. Descriptive statistics (tidyverse)
 
-Compute (at minimum) the mean and standard deviation of `life_exp` and `murder` using `summarize()`.
+Compute (at minimum) the mean and standard deviation of `life_exp` and
+`murder` using `summarize()`.
+
 ```{r}
 states |>
   summarize(mean_life_exp = mean(life_exp),
@@ -72,29 +85,27 @@ You will evaluate whether `murder` predicts `life_exp`.
 
 ## 2a(i). Write the model comparison and null hypothesis
 
-Write Model C and Model A in words and equations, and state the null hypothesis.
+Write Model C and Model A in words and equations, and state the null
+hypothesis.
 
 A typical setup for testing whether a slope is needed is:
 
-- Model C (constrained): slope fixed at 0
-- Model A (augmented): slope estimated from the data
+-   Model C (constrained): slope fixed at 0
+-   Model A (augmented): slope estimated from the data
 
 Use the notation below (fill in the missing pieces in your write-up):
 
-Model C:
-$$
-Y_i = 0 + \varepsilon_i
-$$
-
-Model A:
-$$
-Y_i = X_i+ \varepsilon_i
+Model C: $$
+Y_i = 70.879 + \varepsilon_i
 $$
 
-Null hypothesis (in symbols and words):
+Model A: $$
+Y_i = 72.974 - 0.284X_i+ \varepsilon_i
 $$
+
+Null hypothesis (in symbols and words): $$
 H_0: b_0 = 0
-$$
+$$ The null hypothesis is that murder does not predict life exepctancy.
 
 ## 2a(ii). Fit both models
 
@@ -119,9 +130,9 @@ msummary(list("MC" = model_c,
 
 Compute:
 
-- $\mathrm{SSE}_C$ and $\mathrm{SSE}_A$ from the fitted models
-- $\mathrm{PRE} = (\mathrm{SSE}_C - \mathrm{SSE}_A)/\mathrm{SSE}_C$
-- the model-comparison $F$ statistic
+-   $\mathrm{SSE}_C$ and $\mathrm{SSE}_A$ from the fitted models
+-   $\mathrm{PRE} = (\mathrm{SSE}_C - \mathrm{SSE}_A)/\mathrm{SSE}_C$
+-   the model-comparison $F$ statistic
 
 Use `deviance()` for SSE (RSS) and `df.residual()` as needed.
 
@@ -136,32 +147,47 @@ sse_a <- deviance(model_a)
 pre <- (sse_c - sse_a) / sse_c
 pre
 
-pa <- 1
-pc <- 49
+pa <- 2
+pc <- 1
 n <- 50
 
 f <- ((sse_c - sse_a)/(pa - pc)) / (sse_a/(n - pa))
 f
+
+p_val <- 1 - pf(f, 1, 48)
+p_val
+
+f_crit <- qf(1 - p_val, 49, 48)
+f_crit
 ```
+
 ## 2a(iv). Write the prediction equation and interpret coefficients
 
 Write the prediction equation implied by Model A:
 
 $$
-\widehat{\text{life_exp}} = 72.97 - 0.28 (\text{murder})
+\widehat{life\_exp} = 72.97 - 0.28\, murder
 $$
 
 Interpret:
 
-- the intercept
-- the slope
+-   the intercept The intercept is the expected life expectancy when the
+    murder rate is 0.
+-   the slope For every one percentage point increase in the murder
+    rate, life expectancy goes down by .284 years.
 
 ## 2a(v). Conclusion
 
 State:
 
-- statistical conclusion (report $F$ or $t$, PRE, and $p$)
-- substantive conclusion (in plain language)
+-   statistical conclusion (report $F$ or $t$, PRE, and $p$)
+-   substantive conclusion (in plain language)
+
+Moving from model C to model A reduces error by about 61% (PRE = .610).
+The F statistic for the model is 74.989, which beats the critical F
+value of 7.794 at a p-value of 2.26007e-11. Thus, we can reject the null
+hypothesis that the murder rate does not predict life expectancy. This
+means that model A is a better fit for the data than model C.
 
 # Question 2b: Center the predictor
 
@@ -184,36 +210,45 @@ msummary(list("Centered" = fit_cent),
 
 ## 2b(ii). Report SSE(A), SSE(C), PRE, and F again
 
-Compute the same fit statistics (SSE, PRE, F). Compare them to the results from Question 2a.
+Compute the same fit statistics (SSE, PRE, F). Compare them to the
+results from Question 2a.
+
 ```{r}
 c_sse_a <- deviance(fit_cent)
 
 pre_cent <- (sse_c - c_sse_a) / sse_c
 pre_cent
 
-pa <- 1
-pc <- 49
+pa <- 2
+pc <- 1
 n <- 50
 
 f_cent <- ((sse_c - c_sse_a)/(pa - pc)) / (c_sse_a/(n - pa))
 f_cent
 ```
 
+The fit statistics remain the same as in question 2a.
+
 ## 2b(iii). Interpret coefficients after centering
 
-Write the prediction equation for the centered model and interpret the intercept and slope.
+Write the prediction equation for the centered model and interpret the
+intercept and slope.
 
 In particular: what does the intercept represent *now*?
-$$\widehat{\text{life_exp}} = 70.87 - 0.28 (\text{murder})$$
+
+$$
+\widehat{life\_exp} = 70.87 - 0.28\, murder
+$$
 
 ## 2b(iv). Plot and compare
 
 Make two scatterplots with regression lines:
 
-1. `life_exp` vs. `murder`
-2. `life_exp` vs. `murder_c`
+1.  `life_exp` vs. `murder`
+2.  `life_exp` vs. `murder_c`
 
 How are these plots different?
+
 ```{r}
 plt(life_exp ~ murder,
     data = states,
@@ -222,6 +257,8 @@ plt(life_exp ~ murder,
     sub = "US states, 1977",
     xlab = "Murder rate per 100,000",
     ylab = "Life exepectancy at birth")
+plt_add(type = "lm",
+        level = .99)
 
 plt(life_exp ~ murder_c,
     data = states,
@@ -230,9 +267,15 @@ plt(life_exp ~ murder_c,
     sub = "US states, 1977",
     xlab = "Murder rate per 100,000 centered around the mean",
     ylab = "Life exepectancy at birth")
+plt_add(type = "lm",
+        level = .99)
 ```
 
-# Question 2c: Change the units of the predictor
+These plots differ only in the units of the x-axis. The first plot shows
+the actual murder rate. For the second plot, 0 represents the mean
+murder rate, so negative numbers represent murder rates less than that
+of the mean and positive numbers represent murder rates greater than
+that of the mean. \# Question 2c: Change the units of the predictor
 
 Create a transformed predictor by standardizing `murder`.
 
@@ -266,17 +309,27 @@ f_std <- ((sse_c - sse_std)/(pa - pc)) / (sse_std/(n - pa))
 f_std
 ```
 
+The fit statistics remain the same as in 2a and 2b.
+
 ## 2c(iii). Interpret coefficients after rescaling
 
-Write the prediction equation and interpret the slope carefully in the new units.
+Write the prediction equation and interpret the slope carefully in the
+new units.
+
+$$
+\widehat{life\_exp} = 70.87 - 1.048\, murder_{scaled}
+$$
+
+For every one standard deviation unit increase in murder rate, life
+expectancy decreases by 1.048 years.
 
 # Question 3: Predicted values and what transformations do (and do not) change
 
 You now have three versions of the same basic relationship:
 
-1. using `murder`
-2. using `murder_c`
-3. using `murder_std`
+1.  using `murder`
+2.  using `murder_c`
+3.  using `murder_std`
 
 ```{r}
 msummary(list("Original" = model_a,
@@ -290,24 +343,147 @@ msummary(list("Original" = model_a,
 
 ## 3a. Predicted life expectancy at a specific murder rate
 
-Using each of your three fitted Model A versions, compute the predicted life expectancy for a state with `murder` = 8.
+Using each of your three fitted Model A versions, compute the predicted
+life expectancy for a state with `murder` = 8.
 
-Show your work. (Be explicit about how you convert 8 into the appropriate value for `murder_c` and `murder_std`.)
+Show your work. (Be explicit about how you convert 8 into the
+appropriate value for `murder_c` and `murder_std`.)
+
+```{r}
+# Model A
+life_exp_a <- 72.974 - .284*8
+life_exp_a
+
+# Centered
+life_exp_cent <- 70.879 - .284*.62
+life_exp_cent
+
+# X-standardized
+z <- (8 - 7.38) / 3.69
+life_exp_std <- 70.879 - 1.048*z
+life_exp_std
+```
 
 ## 3b. Summary paragraph
 
-Write a brief summary explaining what you learned about transforming a predictor:
+Write a brief summary explaining what you learned about transforming a
+predictor:
 
-- How do these transformations affect the estimated intercept and slope?
-- Do they change predicted values (when transformed consistently)?
-- Do they change overall goodness of fit (SSE, PRE, $F$)?
+-   How do these transformations affect the estimated intercept and
+    slope?
+-   Do they change predicted values (when transformed consistently)?
+-   Do they change overall goodness of fit (SSE, PRE, $F$)?
+
+Centering the predictor transforms the estimated intercept so that it
+represents the expected outcome when the predictor is at its mean.
+However, it does not change the units, so the slope remains the same as
+in the original equation. When Standardizing the predictor, the
+intercept represents the expected outcome when the predictor is at its
+mean, but the slope is transformed so that it represents the change in
+the outcome for every one standard deviation unit change in the
+predictor. These transformations do not change the predicted values or
+overall goodness of fit.
 
 # Project application
 
-Do the same thing with an outcome and predictor of your choice from your own dataset. Use three transformations:
+Do the same thing with an outcome and predictor of your choice from your
+own dataset. Use three transformations:
 
-- original
-- normalized X
-- fully standardized
+-   original
+-   normalized X
+-   fully standardized
 
-Interpret the intercepts and slopes for each of the three models. Compare the fit statistics for each of the three models.
+```{r}
+gss2024 <- readRDS(file = here::here("data", "gss2024.rds"))
+
+gss <- gss2024 |>
+  select(courtsnv, polviews) |>
+  drop_na() |>
+  haven::zap_labels()
+
+gss_recoded <- gss |>
+  mutate(
+    courtsdv = recode(courtsnv,
+                        `1` = -1,
+                        `2` = 1,
+                        `3` = 0),
+    polviewsdv = polviews - 4
+    )
+
+gss_recoded |>
+  summarize(
+    n = n(),
+    mean_courts = mean(courtsdv, na.rm = TRUE),
+    sd_courts = sd(courtsdv, na.rm = TRUE),
+    mean_polviews = mean(polviewsdv, na.rm = TRUE),
+    sd_polviews = sd(polviewsdv, na.rm = TRUE)
+  )
+
+m_c <- lm(courtsdv ~ 1, 
+          data = gss_recoded)
+ssec <- deviance(m_c)
+
+m_a <- lm(courtsdv ~ 1 + polviewsdv,
+          data = gss_recoded)
+ssea <- deviance(m_a)
+ssea
+
+pre_orig <- (ssec - ssea) / ssec
+pre_orig
+
+# Centered
+
+gss_recoded <- gss_recoded |>
+  mutate(polviews_cent = polviewsdv - mean(polviewsdv))
+
+m_cent <- lm(courtsdv ~ 1 + polviews_cent, 
+             data = gss_recoded)
+
+sse_cent <- deviance(m_cent)
+sse_cent
+
+cent_pre <- (ssec - sse_cent) / ssec
+cent_pre
+
+# X-Standardized
+
+gss_recoded <- gss_recoded |>
+  mutate(polviews_std = (polviewsdv - mean(polviewsdv)) / sd(polviewsdv))
+
+m_stdx <- lm(courtsdv ~ 1 + polviews_std, 
+               data = gss_recoded)
+
+sse_stdx <- deviance(m_stdx)
+
+pre_stdx <- (ssec - sse_stdx) / ssec
+pre_stdx
+
+# Summary
+
+msummary(list("Original" = m_a,
+              "Centered" = m_cent,
+              "X-std." = m_stdx),
+         fmt = 3,
+         estimate = "{estimate}",
+         statistic = NULL,
+         gof_map = c("nobs", "F", "r.squared"))
+```
+
+Interpret the intercepts and slopes for each of the three models.
+Compare the fit statistics for each of the three models.
+
+The original model has an intercept of .546, which represents one's
+opinion on the courts when one self-identifies as having moderate
+political views. For both the centered and X-standardized models, the
+intercept is .545, which represents the expected opinion on courts when
+one's political views align with the mean. For the original and centered
+models, the slope is .114, which means that for every one point more
+conservative someone is, their predicted opinion score is .114 greater,
+meaning that they are more likely to think courts do not deal with
+criminals harshly enough. The slope for the X-standardized model is
+.171, which means that for every standard deviation unit increase in
+political views (i.e., being more conservative), there is an expected
+.171 increase in one's opinion score, meaning that they are more likely
+to think courts do not deal with criminals harshly enough. For all three
+models, the fit statistics remain the same, with a PRE of .041 and an
+F-statistic of 26.029.
