@@ -8,7 +8,6 @@ format: html
 Use the same `states` data from the chapter, with the `inc1000` variable.
 
 ```{r}
-#| eval: false
 pacman::p_load(dplyr, tidyr, broom, stringr, modelsummary, tinyplot, ggplot2)
 
 state.x77_with_names <- as_tibble(state.x77, rownames = "state")
@@ -25,9 +24,8 @@ states <- bind_cols(state.x77_with_names,
 Estimate this additive model and display the results with `msummary()`:
 
 ```{r}
-#| eval: false
 m1 <- lm(life_exp ~ hs_grad + inc1000, data = states)
-msummary(m1)
+msummary(list("Additive Model" = m1))
 ```
 
 Write a sentence interpreting each of the two slope coefficients. Use appropriately hedged language (e.g., "adjusting for...").
@@ -40,33 +38,116 @@ Now compute and examine the 95% confidence interval for `inc1000`. What does it 
 
 2 * .33
 -.073 + .66
--.072 + .66
+-.072 - .66
 
+The 95% confidence interval tells us that if we were to complete the data-gathering and interval-building procedures under the same conditions, the regression coefficient for income would be between -0.732 and 0.587 95% percent of the time. This tells us that the estimate is not precise, as the standard error is far greater than the regression coefficient, and implies that income is not a useful predictor of life expectancy after accounting for education because the coefficient may be negative or positive. 
 
 ## Visualizing the Additive Model
 
 The companion shows two ways to plot `m1`: with `hs_grad` on the x-axis at representative values of income, and then with axes swapped. Make one of these plots (your choice).
 
+```{r}
+myincs <- quantile(states$inc1000,
+                   c(0, .5, 1))
+
+myhs <- seq(min(states$hs_grad),
+            max(states$hs_grad),
+            length = 100)
+
+xgrid <- expand_grid(inc1000 = myincs,
+                     hs_grad = myhs)
+
+yhat <- predict(m1,
+                newdata = xgrid,
+                interval = "confidence",
+                level = .95)
+
+preds <- bind_cols(yhat, xgrid) |>
+  mutate(income = case_match(inc1000,
+                             min(states$inc1000) ~ "min",
+                             max(states$inc1000) ~ "max",
+                             .default = "median"))
+```
+
+```{r}
+ggplot(preds, aes(x = hs_grad, y = fit, color = income, fill = income)) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2, color = NA) +
+  geom_line(linewidth = 1) +
+  labs(
+    title = "Predicted life expectancy",
+    subtitle = "Additive model, 95% CIs",
+    y = "Life expectancy",
+    x = "% of HS grad",
+    color = "income",
+    fill = "income")
+```
+
 In an additive model, the prediction lines for different values of the other variable are always parallel. Explain in 2--3 sentences what the parallelism means substantively. What assumption is the additive model making about how `hs_grad` and `inc1000` jointly affect life expectancy?
+
+The prediction lines in the additive model are parallel because the lines all have the same slopes since there is no interaction term. This means that the slopes remain constant no matter the high school graduation rate and income; the three lines only differ in their intercepts. This model assumes that the effects of high school graduation rate and income on life expectancy do not change based on each other. 
 
 ## The Interaction Model
 
 Now estimate:
 
 ```{r}
-#| eval: false
 m2 <- lm(life_exp ~ hs_grad * inc1000, data = states)
 ```
 
 Display `m1` and `m2` side by side using `msummary()`.
 
+```{r}
+msummary(list("Additive Model" = m1,
+              "Interaction Model" = m2))
+```
+
 The interaction coefficient is negative. What does that mean? Describe the interaction from both directions: what does it say about the slope of `hs_grad` at different levels of income, and what does it say about the slope of `inc1000` at different levels of education?
+
+The interaction coefficient is negative, which means that the effect of income increases as the effect of high school graduation decreases and vice versa. This means that the slope of `hs_grad` is positive at low levels of income and and negative at high levels of income; the slope of `inc1000` is positive at lower high school graduation rates and negative at greater rates of high school graduation.
 
 ## Visualizing the Interaction
 
 Make the interaction plot from the companion --- predicted `life_exp` against `hs_grad` at three representative values of `inc1000` (minimum, median, maximum). Use either tinyplot or ggplot2.
 
+```{r}
+myhs <- seq(min(states$hs_grad),
+            max(states$hs_grad),
+            length = 100)
+
+myincs <- quantile(states$inc1000,
+                   c(0, .5, 1))
+
+xgrid <- expand_grid(inc1000 = myincs,
+                     hs_grad = myhs)
+
+yhat <- predict(m2,
+                newdata = xgrid,
+                interval = "confidence",
+                level = .89)
+
+preds <- bind_cols(yhat, xgrid) |>
+  mutate(income = case_match(inc1000,
+                             min(states$inc1000) ~ "min",
+                             max(states$inc1000) ~ "max",
+                             .default = "median"))
+```
+
+```{r}
+ggplot(preds, aes(x = hs_grad, y = fit, color = income, fill = income)) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2, color = NA) +
+  geom_line(linewidth = 1) +
+  labs(
+    title = "Predicted life expectancy",
+    subtitle = "Interaction model, 95% CIs",
+    y = "Life expectancy",
+    x = "% of HS grad",
+    color = "income",
+    fill = "income")
+```
+
 What's the key visual difference between this plot and the additive model plot? In the footnote to this plot, the companion hints that Alaska and Utah might be driving the interaction. What would you want to investigate if this were a real analysis?
+
+The key visual difference in the two plots is that the prediction lines in the interaction model plot are not parallel. The heat map we looked at in class reveals a relationship that more closely mirrors the prediction line for the median level of income, with Alaska as the high income, high high school graduation rate, and low life expectancy outlier and Utah as the low income, low high school graduation rate, high life expectancy outlier. If this were a real analysis, one would want to investigate these outliers further. 
 
 ## Comparing the Models
 
@@ -74,7 +155,19 @@ Use `anova(m1, m2)` to run the incremental F-test.
 
 What is the null hypothesis of this test? What do you conclude from the result?
 
+```{r}
+anova(m1, m2)
+```
+
+The null hypothesis of this test is that the addition of the interaction term does not improve the fit of the model. From these results, we can reject this null hypothesis.
+
 Now run the likelihood ratio test with `lmtest::lrtest(m1, m2)`. The p-value from the LRT is smaller than the one from the F-test. The companion explains why --- state that explanation in your own words.
+
+```{r}
+lmtest::lrtest(m1, m2)
+```
+
+The likelihood ratio test gives a smaller p-value because it's based on the Chi-squared distribution rather than the F-distribution. The Chi-squared distribution has thinner tails than the F-distribution, thus resulting in the smaller p-value. 
 
 ## Likelihood and Deviance
 
@@ -82,9 +175,41 @@ Now run the likelihood ratio test with `lmtest::lrtest(m1, m2)`. The p-value fro
 
 Using `logLik()`, extract the log-likelihoods of `m1` and `m2`. Compute their deviances ($D = -2\ell$) by hand.
 
+```{r}
+ll_1 <- logLik(m1)
+ll_1
+
+dev_1 <- -2 * as.numeric(ll_1)
+dev_1 
+
+ll_2 <- logLik(m2)
+ll_2
+
+dev_2 <- -2 * as.numeric(ll_2)
+dev_2
+```
+
 The companion notes that `deviance()` on an `lm` object does *not* give you $-2\ell$ --- it gives you the RSS. Confirm this by comparing `deviance(m1)` to your hand-calculated $D$ for `m1`. Why are they different? What does each one measure?
 
+```{r}
+rss1 <- deviance(m1)
+rss1
+
+rss2 <- deviance(m2)
+rss2
+```
+
+$D$ represents how far the predictions of the model are from the data, while `deviance()` gives the residual sum of squares, which is the sum of all the squared residuals for the model. These are different because $D$ is based on likelihood.
+
 Compute the proportional reduction in deviance ($R^2$) for `m1` using both the RSS formula and the $\Delta D$ formula from the companion. Confirm they give the same answer.
+
+```{r}
+r_2_d <- 1 - exp( -(dev_1 - dev_2 ) / nrow(states)) 
+r_2_d
+
+r_2 <- ((rss1 - rss2) / rss1)
+r_2
+```
 
 ## AIC and BIC
 
@@ -93,12 +218,47 @@ Compute the proportional reduction in deviance ($R^2$) for `m1` using both the R
 Estimate a null model (`m0`), the additive model (`m1`), and the interaction model (`m2`). Then compute AIC and BIC for all three.
 
 ```{r}
-#| eval: false
 m0 <- lm(life_exp ~ 1, data = states)
+```
+
+### AIC
+```{r}
+dev_0 <- -2 * as.numeric(logLik(m0))
+
+aic_0 <- dev_0 + (2 * 1)
+aic_0
+
+aic_1 <- dev_1 + (2 * 3)
+aic_1
+
+aic_2 <- dev_2 + (2 * 4)
+aic_2
+```
+
+### BIC
+```{R}
+bic_0 <- dev_0 + (1 * log(nrow(states)))
+bic_0
+
+bic_1 <- dev_1 + (3 * log(nrow(states)))
+bic_1
+
+bic_2 <- dev_2 + (4 * log(nrow(states)))
+bic_2
 ```
 
 Which model is preferred by AIC? Which by BIC? Are they the same?
 
+Both AIC and BIC prefer the interaction model.
+
 The companion explains that the AIC penalty of $2k$ corresponds to the expected increase in out-of-sample deviance per extra parameter. In your own words, what problem is the penalty term meant to solve? Why can't we just pick the model with the lowest deviance (i.e., the best in-sample fit)?
 
+The penalty term is meant to account for how much worse the additional parameters will make the deviance. Using the model with the lowers deviance may result in the model being overfitted, or overly complicated. 
+
 The BIC penalty is $k \log n$ instead of $2k$. For $n = 50$, compute $\log(50)$ and compare it to 2. What does this tell you about how the two criteria will differ in their preferences when $n$ is small vs. large?
+
+```{r}
+log(50)
+```
+
+When $n$ is small, the addition of an additional parameter would have to decrease the deviance by a greater proportion to be prefered by BIC than AIC. 
